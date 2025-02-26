@@ -17,6 +17,7 @@ func main() {
 	ctx := context.Background()
 	ctx, _ = logger.New(ctx)
 
+	
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", 50051))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)

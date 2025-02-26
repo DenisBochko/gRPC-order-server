@@ -124,7 +124,7 @@ func (s *Service) DeleteOrder(ctx context.Context, OrderRequest *test.DeleteOrde
 	s.mutex.Unlock()
 
 	if !isExist {
-		return nil, fmt.Errorf("order with specified id does not exist")
+		return &test.DeleteOrderResponse{Success: false}, fmt.Errorf("order with specified id does not exist")
 	}
 
 	delete(s.storage, id)
