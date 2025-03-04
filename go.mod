@@ -1,6 +1,8 @@
 module order-server
 
-go 1.23.1
+go 1.24
+
+toolchain go1.24.0
 
 require (
 	github.com/google/uuid v1.6.0
@@ -10,9 +12,11 @@ require (
 )
 
 require (
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.2 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
-	golang.org/x/net v0.32.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
+	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb // indirect
 )
