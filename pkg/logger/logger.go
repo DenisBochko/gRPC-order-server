@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	key = "logger"
+	key       = "logger"
 	RequestID = "requestID"
 )
 
@@ -27,7 +27,7 @@ func New(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
-func GetLoggerFromCtx(ctx context.Context) (*Logger) {
+func GetLoggerFromCtx(ctx context.Context) *Logger {
 	return ctx.Value(key).(*Logger) // приведение типа
 }
 
@@ -37,4 +37,12 @@ func (l *Logger) Info(ctx context.Context, massage string, fields ...zap.Field) 
 	}
 
 	l.lg.Info(massage, fields...)
+}
+
+func (l *Logger) Fatal(ctx context.Context, massage string, fields ...zap.Field) {
+	if ctx.Value(RequestID) != nil {
+		fields = append(fields, zap.String(RequestID, ctx.Value(RequestID).(string)))
+	}
+
+	l.lg.Fatal(massage, fields...)
 }
