@@ -22,19 +22,19 @@ import (
 )
 
 func main() {
-	grpcAddr := ":50051"
-	httpAddr := ":8081"
-
 	ctx := context.Background()
 	ctx, _ = logger.New(ctx)
 
 	// Конфигурации
-	cfg, err := config.New()
+	cfg, err := config.NewENV()
 	if err != nil {
 		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed load to config", zap.Error(err))
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%s", cfg.PortGRPC))
+	grpcAddr := fmt.Sprintf(":%s", cfg.PortGRPC)
+	httpAddr := ":8080"
+
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost%s", grpcAddr))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -59,7 +59,7 @@ func main() {
 
 	// Запускаем gRPC сервер в отдельной горутине
 	go func() {
-		logger.GetLoggerFromCtx(ctx).Info(ctx, "gRPC server is running")
+		logger.GetLoggerFromCtx(ctx).Info(ctx, "gRPC server is running", zap.String("Port", grpcAddr))
 		if err := server.Serve(lis); err != nil {
 			logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to serve", zap.Error(err))
 		}
@@ -67,11 +67,11 @@ func main() {
 
 	// Ожидаем сигнал завершения
 	<-stop
-	log.Println("Shutting down servers gracefully...")
+	// log.Println("Shutting down servers gracefully...")
 
 	// Завершаем gRPC-сервер
 	server.GracefulStop()
-	log.Println("gRPC server stopped")
+	// log.Println("gRPC server stopped")
 
 	// Завершаем HTTP сервер с тайм-аутом
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -80,7 +80,7 @@ func main() {
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("HTTP server shutdown failed: %v", err)
 	}
-	log.Println("gRPC-Gateway stopped")
+	fmt.Println("Server Stopped")
 
 	// Завершаем контекст gRPC-Gateway
 	cancel()
