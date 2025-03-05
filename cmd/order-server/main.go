@@ -10,9 +10,11 @@ import (
 	"order-server/internal/service"
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -20,60 +22,97 @@ import (
 )
 
 func main() {
-	// go runRest()
+	grpcAddr := ":50051"
+	httpAddr := ":8081"
 
 	ctx := context.Background()
 	ctx, _ = logger.New(ctx)
 
+	// Конфигурации
 	cfg, err := config.New()
-
 	if err != nil {
 		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed load to config", zap.Error(err))
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", cfg.PortGRPC))
+	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%s", cfg.PortGRPC))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
 	srv := service.New(ctx)
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(srv.LoggerInterceptor))
 
 	test.RegisterOrderServiceServer(server, srv)
 
-	logger.GetLoggerFromCtx(ctx).Info(ctx, "starting serve")
+	// Создаём контекст для gRPC-Gateway
+	gatewayCtx, cancel := context.WithCancel(context.Background())
 
-	if err := server.Serve(lis); err != nil {
-		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to serve", zap.Error(err))
+	// Запускаем gRPC-Gateway
+	httpServer, err := runGRPCGateway(gatewayCtx, grpcAddr, httpAddr)
+	if err != nil {
+		log.Fatalf("failed to start gRPC-Gateway: %v", err)
 	}
+
+	// Канал для сигналов ОС
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	// Запускаем gRPC сервер в отдельной горутине
+	go func() {
+		logger.GetLoggerFromCtx(ctx).Info(ctx, "gRPC server is running")
+		if err := server.Serve(lis); err != nil {
+			logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to serve", zap.Error(err))
+		}
+	}()
+
+	// Ожидаем сигнал завершения
+	<-stop
+	log.Println("Shutting down servers gracefully...")
+
+	// Завершаем gRPC-сервер
+	server.GracefulStop()
+	log.Println("gRPC server stopped")
+
+	// Завершаем HTTP сервер с тайм-аутом
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("HTTP server shutdown failed: %v", err)
+	}
+	log.Println("gRPC-Gateway stopped")
+
+	// Завершаем контекст gRPC-Gateway
+	cancel()
 }
 
-func runRest() error {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+func runGRPCGateway(ctx context.Context, gGRPAddr, httpAddr string) (*http.Server, error) {
+	mux := http.NewServeMux()
 
 	// Register gRPC server endpoint
 	// Note: Make sure the gRPC server is running properly and accessible
-	mux := runtime.NewServeMux()
+	gwMux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-	err := test.RegisterOrderServiceHandlerFromEndpoint(ctx, mux, "localhost:50051", opts)
+	err := test.RegisterOrderServiceHandlerFromEndpoint(ctx, gwMux, gGRPAddr, opts)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Start HTTP server (and proxy calls to gRPC server endpoint)
-	return http.ListenAndServe(":8081", mux)
-}
+	// Регистрируем gRPC-Gateway на основном HTTP mux
+	mux.Handle("/", gwMux)
 
-func loggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-	guid := uuid.New().String()
-	ctx = context.WithValue(ctx, logger.RequestID, guid)
+	// Запускаем HTTP-сервер
+	server := &http.Server{
+		Addr:    httpAddr,
+		Handler: mux,
+	}
 
-	logger.GetLoggerFromCtx(ctx).Info(ctx,
-		"request", zap.String("method", info.FullMethod),
-		zap.Time("request_time", time.Now()))
+	go func() {
+		log.Println("gRPC-Gateway is running on", httpAddr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("failed to serve gRPC-Gateway: %v", err)
+		}
+	}()
 
-	return handler(ctx, req)
-
+	return server, nil
 }

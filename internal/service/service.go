@@ -6,8 +6,11 @@ import (
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 // type OrderServiceServer interface {
@@ -55,7 +58,7 @@ func (s *Service) CreateOrder(ctx context.Context, OrderRequest *test.CreateOrde
 	s.mutex.Unlock()
 
 	// Логируем создание заказа
-	logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("created order: %v", order))
+	// logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("created order: %v", order))
 
 	return &test.CreateOrderResponse{Id: id.String()}, nil
 }
@@ -85,7 +88,7 @@ func (s *Service) UpdateOrder(ctx context.Context, OrderRequest *test.UpdateOrde
 	s.storage[order.Id] = order
 	s.mutex.Unlock()
 
-	logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("update order: %v", order))
+	// logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("update order: %v", order))
 
 	return &test.UpdateOrderResponse{Order: order}, nil
 }
@@ -106,7 +109,7 @@ func (s *Service) GetOrder(ctx context.Context, OrderRequest *test.GetOrderReque
 		return nil, fmt.Errorf("order with specified id does not exist")
 	}
 
-	logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("geted order: %v", order))
+	// logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("geted order: %v", order))
 
 	return &test.GetOrderResponse{Order: order}, nil
 }
@@ -129,7 +132,7 @@ func (s *Service) DeleteOrder(ctx context.Context, OrderRequest *test.DeleteOrde
 
 	delete(s.storage, id)
 
-	logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("deleted order with id: %s", id))
+	// logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("deleted order with id: %s", id))
 
 	return &test.DeleteOrderResponse{Success: true}, nil
 }
@@ -143,7 +146,18 @@ func (s *Service) ListOrders(ctx context.Context, OrdersRequest *test.ListOrders
 	}
 	s.mutex.Unlock()
 
-	logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, "Order list received")
+	// logger.GetLoggerFromCtx(ctx).Info(ctx, fmt.Sprint(ctx.Value(logger.RequestID)))
 
 	return &test.ListOrdersResponse{Orders: orders}, nil
+}
+
+func (s *Service) LoggerInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	guid := uuid.New().String()
+	ctx = context.WithValue(s.ctx, logger.RequestID, guid)
+
+	logger.GetLoggerFromCtx(ctx).Info(ctx,
+		"request", zap.String("method", info.FullMethod),
+		zap.Time("request_time", time.Now()))
+
+	return handler(ctx, req)
 }
