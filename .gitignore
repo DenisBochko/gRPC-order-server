@@ -1,2 +1,5 @@
 .env
 .vscode
+/bin
+pkg/api/
+!pkg/api/.gitkeep

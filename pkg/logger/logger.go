@@ -27,6 +27,7 @@ func New(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
+// Получить логгер из контекста 
 func GetLoggerFromCtx(ctx context.Context) *Logger {
 	return ctx.Value(key).(*Logger) // приведение типа
 }

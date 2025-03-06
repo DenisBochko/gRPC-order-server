@@ -34,7 +34,7 @@ func main() {
 	grpcAddr := fmt.Sprintf(":%s", cfg.PortGRPC)
 	httpAddr := ":8080"
 
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost%s", grpcAddr))
+	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

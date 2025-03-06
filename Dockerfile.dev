@@ -1,0 +1,20 @@
+FROM golang:1.24
+
+# Устанавливаем protoc и утилиты
+RUN apt-get update && apt-get install -y \
+    make \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="${PATH}:$(go env GOPATH)/bin"
+
+EXPOSE 8080:8080
+EXPOSE 50051:50051
+
+WORKDIR /app
+
+COPY . .
+
+RUN make build 
+
+CMD ["./bin/order-server"]
