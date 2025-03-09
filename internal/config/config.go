@@ -1,10 +1,13 @@
 package config
 
 import (
+	"order-server/pkg/postgres"
+
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
+	postgres.Postgres
 	PortGRPC string `yaml:"GRPC_PORT" env:"GRPC_PORT" env-default:"50051"`
 	PortHttp string `yaml:"HTTP_PORT" env:"HTTP_PORT" env-default:"8080"`
 }
@@ -26,6 +29,5 @@ func NewENV() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &cfg, nil
 }

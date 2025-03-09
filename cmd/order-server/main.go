@@ -26,13 +26,20 @@ func main() {
 	ctx, _ = logger.New(ctx)
 
 	// Конфигурации
-	cfg, err := config.NewENV()
+	cfg, err := config.NewYAML()
 	if err != nil {
 		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed load to config", zap.Error(err))
 	}
 
+	// Подключение к БД
+	// conn, err := postgres.New(cfg.Config)
+	// if err != nil {
+	// 	logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to connect to database", zap.Error(err))
+	// }
+	logger.GetLoggerFromCtx(ctx).Info(ctx, fmt.Sprint(cfg.Postgres))
+
 	grpcAddr := fmt.Sprintf(":%s", cfg.PortGRPC)
-	httpAddr := ":8080"
+	httpAddr := fmt.Sprintf(":%s", cfg.PortHttp)
 
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
