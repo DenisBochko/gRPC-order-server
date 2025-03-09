@@ -10,6 +10,7 @@ import (
 	"order-server/internal/service"
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
+	"order-server/pkg/postgres"
 	"os"
 	"os/signal"
 	"syscall"
@@ -32,11 +33,11 @@ func main() {
 	}
 
 	// Подключение к БД
-	// conn, err := postgres.New(cfg.Config)
-	// if err != nil {
-	// 	logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to connect to database", zap.Error(err))
-	// }
-	logger.GetLoggerFromCtx(ctx).Info(ctx, fmt.Sprint(cfg.Postgres))
+	conn, err := postgres.New(ctx, cfg.PostgresCfg)
+	if err != nil {
+		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to connect to database", zap.Error(err))
+	}
+	logger.GetLoggerFromCtx(ctx).Info(ctx, "connected to database", zap.String("Conn", fmt.Sprint(conn.Ping(ctx))))
 
 	grpcAddr := fmt.Sprintf(":%s", cfg.PortGRPC)
 	httpAddr := fmt.Sprintf(":%s", cfg.PortHttp)
@@ -74,11 +75,11 @@ func main() {
 
 	// Ожидаем сигнал завершения
 	<-stop
-	// log.Println("Shutting down servers gracefully...")
+	log.Println("Shutting down servers gracefully...")
 
 	// Завершаем gRPC-сервер
 	server.GracefulStop()
-	// log.Println("gRPC server stopped")
+	log.Println("gRPC server stopped")
 
 	// Завершаем HTTP сервер с тайм-аутом
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
