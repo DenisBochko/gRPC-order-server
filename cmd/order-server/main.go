@@ -11,10 +11,8 @@ import (
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
 	"order-server/pkg/postgres"
-	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"go.uber.org/zap"
@@ -26,6 +24,10 @@ func main() {
 	ctx := context.Background()
 	ctx, _ = logger.New(ctx)
 
+	// Обработка сигналов завершения
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	// Конфигурации
 	cfg, err := config.NewYAML()
 	if err != nil {
@@ -33,12 +35,12 @@ func main() {
 	}
 
 	// Подключение к БД
-	conn, err := postgres.New(ctx, cfg.PostgresCfg)
-	if err != nil {
-		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to connect to database", zap.Error(err))
+	conn, _ := postgres.New(ctx, cfg.PostgresCfg)
+	if conn.Ping(ctx) != nil {
+		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to connect to database", zap.Error(err))
 	}
-	logger.GetLoggerFromCtx(ctx).Info(ctx, "connected to database", zap.String("Conn", fmt.Sprint(conn.Ping(ctx))))
 
+	// Порты
 	grpcAddr := fmt.Sprintf(":%s", cfg.PortGRPC)
 	httpAddr := fmt.Sprintf(":%s", cfg.PortHttp)
 
@@ -52,18 +54,11 @@ func main() {
 
 	test.RegisterOrderServiceServer(server, srv)
 
-	// Создаём контекст для gRPC-Gateway
-	gatewayCtx, cancel := context.WithCancel(context.Background())
-
 	// Запускаем gRPC-Gateway
-	httpServer, err := runGRPCGateway(gatewayCtx, grpcAddr, httpAddr)
+	httpServer, err := runGRPCGateway(ctx, grpcAddr, httpAddr)
 	if err != nil {
-		log.Fatalf("failed to start gRPC-Gateway: %v", err)
+		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to start gRPC-Gateway", zap.Error(err))
 	}
-
-	// Канал для сигналов ОС
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
 	// Запускаем gRPC сервер в отдельной горутине
 	go func() {
@@ -74,24 +69,24 @@ func main() {
 	}()
 
 	// Ожидаем сигнал завершения
-	<-stop
-	log.Println("Shutting down servers gracefully...")
+	select {
+	case <-ctx.Done():
+		log.Println("Shutting down servers gracefully...")
 
-	// Завершаем gRPC-сервер
-	server.GracefulStop()
-	log.Println("gRPC server stopped")
+		// Завершаем gRPC-сервер
+		server.GracefulStop()
+		log.Println("gRPC server stopped")
 
-	// Завершаем HTTP сервер с тайм-аутом
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel()
+		// Завершаем Pool соединений с БД
+		conn.Close()
+		log.Println("Database connection closed")
 
-	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("HTTP server shutdown failed: %v", err)
+		// Завершаем HTTP сервер
+		httpServer.Shutdown(ctx)
+		log.Println("Http server stopped")
+
+		log.Println("Server Stopped")
 	}
-	fmt.Println("Server Stopped")
-
-	// Завершаем контекст gRPC-Gateway
-	cancel()
 }
 
 func runGRPCGateway(ctx context.Context, gGRPAddr, httpAddr string) (*http.Server, error) {
@@ -116,7 +111,7 @@ func runGRPCGateway(ctx context.Context, gGRPAddr, httpAddr string) (*http.Serve
 	}
 
 	go func() {
-		log.Println("gRPC-Gateway is running on", httpAddr)
+		logger.GetLoggerFromCtx(ctx).Info(ctx, "gRPC-Gateway is running", zap.String("Port", httpAddr))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("failed to serve gRPC-Gateway: %v", err)
 		}
