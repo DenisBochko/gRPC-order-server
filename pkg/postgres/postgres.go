@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -19,22 +22,35 @@ type PostgresCfg struct {
 }
 
 func New(ctx context.Context, config PostgresCfg) (*pgxpool.Pool, error) {
-	// urlExample := "postgres://username:password@localhost:5432/database_name"
-	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&pool_max_conns=%d&pool_min_conns=%d",
+	// urlExample := "postgres://username:password@localhost:5432/database_name?sslmode=%s&pool_max_conns=%d&pool_min_conns=%d"
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		config.Username,
 		config.Password,
 		config.Host,
 		config.Port,
 		config.Database,
 		config.Sslmode,
-		config.MaxConn,
-		config.MinConn,
+		// config.MaxConn,
+		// config.MinConn,
 	)
 
 	conn, err := pgxpool.New(ctx, connString)
 
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to database: %w", err)
+	}
+
+	// Применям миграции
+	m, err := migrate.New(
+		"file://db/migrations",
+		connString,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to migrate to database: %w", err)
+	}
+
+	if err := m.Up(); err != nil {
+		return nil, fmt.Errorf("failed to migrate to database: %w", err)
 	}
 
 	return conn, nil
