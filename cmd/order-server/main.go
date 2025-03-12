@@ -60,7 +60,7 @@ func main() {
 		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to start gRPC-Gateway", zap.Error(err))
 	}
 
-	// Запускаем gRPC сервер в отдельной горутине
+	// Запускаем gRPC сервер 
 	go func() {
 		logger.GetLoggerFromCtx(ctx).Info(ctx, "gRPC server is running", zap.String("Port", grpcAddr))
 		if err := server.Serve(lis); err != nil {
