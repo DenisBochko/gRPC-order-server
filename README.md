@@ -5,10 +5,11 @@
 make build 
 make start
 ```
+###### Не забыть поднять базу и изменить config/config.yaml
 
 ### Запуск через Docker
+###### Перед запуском необходимо сделать make build (сгенерировать файлы из order.proto)
 
 ```
-docker build -t grpc-server:1 -f Dockerfile.dev .  
-docker run --rm -p 8080:8080 -p 50051:50051 --name grpc grpc-server:1 
+docker-compose up --build
 ```
