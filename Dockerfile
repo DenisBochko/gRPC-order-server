@@ -1,12 +1,21 @@
 FROM golang:1.24 AS builder
 
-WORKDIR /app 
+RUN apt-get update && apt-get install -y \
+    make \
+    protobuf-compiler \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="${PATH}:$(go env GOPATH)/bin"
+
+WORKDIR /app
 
 COPY . .
 
-RUN go mod download
-
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/bin/order-server ./cmd/order-server/main.go
+RUN make install && \
+    make gen-grpc && \
+    make gen-grpc-proxy && \
+    make tidy && \
+    CGO_ENABLED=0 GOOS=linux go build -o /app/bin/order-server ./cmd/order-server/main.go
 
 FROM ubuntu:22.04
 
@@ -19,3 +28,4 @@ EXPOSE 8080
 EXPOSE 50051
 
 CMD ["/app/bin/order-server"]
+# CMD ["bash"]
