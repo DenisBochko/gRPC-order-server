@@ -8,8 +8,9 @@ import (
 
 type Config struct {
 	postgres.PostgresCfg
-	PortGRPC string `yaml:"GRPC_PORT" env:"GRPC_PORT"`
-	PortHttp string `yaml:"HTTP_PORT" env:"HTTP_PORT"`
+	PortGRPC    string `yaml:"GRPC_PORT" env:"GRPC_PORT"`
+	PortHttp    string `yaml:"HTTP_PORT" env:"HTTP_PORT"`
+	Environment string `yaml:"ENV" env:"ENV"`
 }
 
 func NewYAML() (*Config, error) {

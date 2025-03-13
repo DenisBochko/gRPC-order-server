@@ -36,11 +36,6 @@ func main() {
 
 	// Подключение к БД
 	conn, err := postgres.New(ctx, cfg.PostgresCfg)
-
-	if err != nil {
-		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to connect to database", zap.Error(err))
-	}
-
 	if conn.Ping(ctx) != nil {
 		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to connect to database", zap.Error(err))
 	}
