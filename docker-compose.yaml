@@ -1,14 +1,48 @@
 services:
   db:
     image: postgres:15
-    container_name: Postgres
+    container_name: database
     environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: admin
       POSTGRES_DB: test_db
     ports:
-      - "5430:5432"
+      - "5432:5432"
+    # если база упала с ошибкой, то мы её перезапускаем
+    restart: always
+
     volumes:
       - postgres:/data/postgres
+
+    # это проверка базы данных, команда дёргает postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-U", "admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  service:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: order-service:latest
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    environment:
+      GRPC_PORT: 50052
+      HTTP_PORT: 8081
+      POSTGRES_HOST: database
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: admin
+      POSTGRES_PASS: admin
+      POSTGRES_DB: test_db
+      POSTGRES_SSLMODE: disable
+      POSTGRES_MAX_CONN: 10
+      POSTGRES_MIN_CONN: 5
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres:

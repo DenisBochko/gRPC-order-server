@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,17 +40,17 @@ func New(ctx context.Context, config PostgresCfg) (*pgxpool.Pool, error) {
 	}
 
 	// Применям миграции
-	m, err := migrate.New(
-		"file://db/migrations",
-		connString,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to migrate to database: %w", err)
-	}
+	// m, err := migrate.New(
+	// 	"file://db/migrations",
+	// 	connString,
+	// )
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to migrate to database: %w", err)
+	// }
 
-	if err := m.Up(); err != nil {
-		return nil, fmt.Errorf("failed to migrate to database: %w", err)
-	}
+	// if err := m.Up(); err != nil {
+	// 	return nil, fmt.Errorf("failed to migrate to database: %w", err)
+	// }
 
 	return conn, nil
 }

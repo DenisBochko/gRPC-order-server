@@ -29,7 +29,7 @@ func main() {
 	defer stop()
 
 	// Конфигурации
-	cfg, err := config.NewYAML()
+	cfg, err := config.NewENV()
 	if err != nil {
 		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed load to config", zap.Error(err))
 	}
