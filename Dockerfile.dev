@@ -11,7 +11,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN make build 
+RUN make setup 
 
 EXPOSE 8080:8080
 EXPOSE 50051:50051
