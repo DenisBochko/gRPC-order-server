@@ -1,15 +1,13 @@
 # gRPC order-server
 
 ### Запуск через make
+##### Не забыть поднять базу и изменить config/config.yaml
 ```
-make build 
+make setup 
 make start
 ```
-###### Не забыть поднять базу и изменить config/config.yaml
 
 ### Запуск через Docker
-###### Перед запуском необходимо сделать make build (сгенерировать файлы из order.proto)
-
 ```
 docker-compose up --build
 ```
