@@ -2,25 +2,18 @@ stages:
   - build
   - test
 
-variables:
-  IMAGE_NAME: "order-service"
-  IMAGE_TAG: "latest"
-  DOCKER_TLS_CERTDIR: ""
-  DOCKER_HOST: "tcp://docker:2375"  # Указать, где находится Docker daemon
+# variables:
+#   IMAGE_NAME: "order-service"
+#   IMAGE_TAG: "latest"
+#   DOCKER_TLS_CERTDIR: ""
+#   DOCKER_HOST: "tcp://docker:2375"  # Указать, где находится Docker daemon
 
 build:
   stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  privileged: true
   script:
-    - unset DOCKER_HOST
-    - docker info  # Проверить подключение к Docker daemon
-    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" --target builder .
+    - docker build -t order-service_build --target builder .
 
 test:
   stage: test
   script:
-    - unset DOCKER_HOST
-    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" --target tester .
+    - docker build -t order-service_test --target tester .
