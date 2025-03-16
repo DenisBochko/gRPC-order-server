@@ -35,12 +35,6 @@ func New(ctx context.Context) *Service {
 	}
 }
 
-/*
-	{
-	    "item": "book1",
-	    "quantity": 122
-	}
-*/
 func (s *Service) CreateOrder(ctx context.Context, OrderRequest *test.CreateOrderRequest) (*test.CreateOrderResponse, error) {
 	id := uuid.New() // Генерация нового UUID (v4)
 
@@ -63,13 +57,6 @@ func (s *Service) CreateOrder(ctx context.Context, OrderRequest *test.CreateOrde
 	return &test.CreateOrderResponse{Id: id.String()}, nil
 }
 
-/*
-	{
-		"id": "",
-	    "item": "book1",
-	    "quantity": 122
-	}
-*/
 func (s *Service) UpdateOrder(ctx context.Context, OrderRequest *test.UpdateOrderRequest) (*test.UpdateOrderResponse, error) {
 	id := OrderRequest.GetId()
 
@@ -78,13 +65,13 @@ func (s *Service) UpdateOrder(ctx context.Context, OrderRequest *test.UpdateOrde
 	s.mutex.Unlock()
 
 	if !isExist {
+		s.mutex.Unlock()
 		return nil, fmt.Errorf("order with specified id does not exist")
 	}
 
+	s.mutex.Lock()
 	order.Item = OrderRequest.GetItem()
 	order.Quantity = OrderRequest.GetQuantity()
-
-	s.mutex.Lock()
 	s.storage[order.Id] = order
 	s.mutex.Unlock()
 
@@ -93,11 +80,6 @@ func (s *Service) UpdateOrder(ctx context.Context, OrderRequest *test.UpdateOrde
 	return &test.UpdateOrderResponse{Order: order}, nil
 }
 
-/*
-	{
-	   "id": ""
-	}
-*/
 func (s *Service) GetOrder(ctx context.Context, OrderRequest *test.GetOrderRequest) (*test.GetOrderResponse, error) {
 	id := OrderRequest.GetId()
 
@@ -114,11 +96,6 @@ func (s *Service) GetOrder(ctx context.Context, OrderRequest *test.GetOrderReque
 	return &test.GetOrderResponse{Order: order}, nil
 }
 
-/*
-	{
-	   "id": ""
-	}
-*/
 func (s *Service) DeleteOrder(ctx context.Context, OrderRequest *test.DeleteOrderRequest) (*test.DeleteOrderResponse, error) {
 	id := OrderRequest.GetId()
 
