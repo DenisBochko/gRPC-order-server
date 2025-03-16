@@ -1,3 +1,4 @@
+# Stage 1: Builder
 FROM golang:1.24 AS builder
 
 RUN apt-get update && apt-get install -y \
@@ -20,6 +21,12 @@ RUN make gen-grpc && \
     make tidy && \
     CGO_ENABLED=0 GOOS=linux go build -o /app/bin/order-server ./cmd/order-server/main.go
 
+# Stage 2: Tests
+FROM builder AS tester
+
+RUN go test -count=10 --race ./internal/service
+
+# Stage 3: Run 
 FROM ubuntu:22.04
 
 WORKDIR /app 
