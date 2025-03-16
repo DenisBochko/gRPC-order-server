@@ -14,10 +14,12 @@ build:
   services:
     - docker:dind
   script:
+    - unset DOCKER_HOST
     - docker info  # Проверить подключение к Docker daemon
     - docker build -t "$IMAGE_NAME:$IMAGE_TAG" --target builder .
 
 test:
   stage: test
   script:
+    - unset DOCKER_HOST
     - docker build -t "$IMAGE_NAME:$IMAGE_TAG" --target tester .
