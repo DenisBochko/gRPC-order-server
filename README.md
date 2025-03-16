@@ -11,3 +11,8 @@ make start
 ```
 docker-compose up --build
 ```
+
+### Тестирование service
+```
+go test -count=10 --race ./internal/service
+```
