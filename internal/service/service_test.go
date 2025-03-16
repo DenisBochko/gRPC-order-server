@@ -31,6 +31,7 @@ func TestCreateOrder(t *testing.T) {
 			resp, _ := service.CreateOrder(context.Background(), tt.CreateOrderRequest)
 
 			if tt.wantErr {
+				// require - полностью останавливает тест при ошибке
 				require.NotEqual(t, len([]byte(resp.Id)), len([]byte(tt.CreateOrderResponse.Id)))
 			} else {
 				require.Equal(t, len([]byte(resp.Id)), len([]byte(tt.CreateOrderResponse.Id)))
@@ -49,6 +50,7 @@ func TestRaceCondition(t *testing.T) {
 	// Создаём заказ
 	req := &test.CreateOrderRequest{Item: "book", Quantity: 10}
 	resp, err := service.CreateOrder(context.Background(), req)
+	// assert - продолжает выполнение теста при ошибке
 	assert.NoError(t, err)
 	assert.NotEmpty(t, resp)
 
