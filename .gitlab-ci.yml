@@ -12,9 +12,9 @@ build:
   services:
     - docker:dind
   script:
-    - docker build -t --target builder "$IMAGE_NAME:$IMAGE_TAG" .
+    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" --target builder .
 
 test:
   stage: test
   script:
-    - docker build -t --target tester "$IMAGE_NAME:$IMAGE_TAG" .
+    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" --target tester .
