@@ -13,7 +13,7 @@ build:
   image: docker:latest
   services:
     - docker:dind
-    - privileged: true
+  privileged: true
   script:
     - unset DOCKER_HOST
     - docker info  # Проверить подключение к Docker daemon
