@@ -1,12 +1,14 @@
 image: docker:latest  
 
 services:
-  - docker:dind  
+  - name: docker:dind
+    command: ["--tls=false"]  
+    privileged: true  
 
 variables:
-  DOCKER_HOST: tcp://docker:2375  # Указываем хост для Docker
+  DOCKER_HOST: tcp://docker:2375  
   DOCKER_DRIVER: overlay2  
-  DOCKER_TLS_CERTDIR: ""  # Отключаем TLS (GitLab Runner не поддерживает его по умолчанию)
+  DOCKER_TLS_CERTDIR: "" 
 
 stages:
   - build  
