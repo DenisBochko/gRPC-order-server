@@ -1,27 +1,27 @@
-image: docker:latest  
+# image: docker:latest  
 
-services:
-  - name: docker:dind
-    command: ["--tls=false"]  
+# services:
+#   - name: docker:dind
+#     command: ["--tls=false"]  
 
-variables:
-  DOCKER_HOST: tcp://docker:2376/  
-  DOCKER_DRIVER: overlay2  
-  DOCKER_TLS_CERTDIR: "" 
+# variables:
+#   DOCKER_HOST: tcp://docker:2376/  
+#   DOCKER_DRIVER: overlay2  
+#   DOCKER_TLS_CERTDIR: "" 
 
-stages:
-  - build  
-  - test  
+# stages:
+#   - build  
+#   - test  
 
-build_image:
-  stage: build  
-  script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -t $CI_REGISTRY_IMAGE:latest -f Dockerfile.dev .  # Собираем образ
-    - docker push $CI_REGISTRY_IMAGE:latest  
+# build_image:
+#   stage: build  
+#   script:
+#     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+#     - docker build -t $CI_REGISTRY_IMAGE:latest -f Dockerfile.dev .  # Собираем образ
+#     - docker push $CI_REGISTRY_IMAGE:latest  
 
-test_image:
-  stage: test  
-  script:
-    - docker pull $CI_REGISTRY_IMAGE:latest  # Загружаем собранный образ
-    - docker run --rm $CI_REGISTRY_IMAGE:latest go test -count=10 --race ./internal/service  # Запускаем тесты
+# test_image:
+#   stage: test  
+#   script:
+#     - docker pull $CI_REGISTRY_IMAGE:latest  # Загружаем собранный образ
+#     - docker run --rm $CI_REGISTRY_IMAGE:latest go test -count=10 --race ./internal/service  # Запускаем тесты

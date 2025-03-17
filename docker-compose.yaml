@@ -29,20 +29,12 @@ services:
     ports:
       - "8080:8080"
       - "50051:50051"
-    environment:
-      GRPC_PORT: 50051
-      HTTP_PORT: 8080
-      POSTGRES_HOST: database
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: admin
-      POSTGRES_PASS: admin
-      POSTGRES_DB: test_db
-      POSTGRES_SSLMODE: disable
-      POSTGRES_MAX_CONN: 10
-      POSTGRES_MIN_CONN: 5
+    env_file:
+      - .env
     depends_on:
       db:
         condition: service_healthy
+    restart: always
 
 volumes:
   postgres:
