@@ -3,7 +3,6 @@ image: docker:latest
 services:
   - name: docker:dind
     command: ["--tls=false"]  
-    privileged: true  
 
 variables:
   DOCKER_HOST: tcp://docker:2375  
@@ -20,6 +19,7 @@ build_image:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build -t $CI_REGISTRY_IMAGE:latest -f Dockerfile.dev .  # Собираем образ
     - docker push $CI_REGISTRY_IMAGE:latest  
+  privileged: true  # Вынесли сюда
 
 test_image:
   stage: test  
