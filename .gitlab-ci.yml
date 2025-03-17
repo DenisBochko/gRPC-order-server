@@ -1,19 +1,24 @@
+image: docker:latest  
+
+services:
+  - docker:dind  
+
+variables:
+  DOCKER_DRIVER: overlay2  
+
 stages:
-  - build
-  - test
+  - build  
+  - test  
 
-# variables:
-#   IMAGE_NAME: "order-service"
-#   IMAGE_TAG: "latest"
-#   DOCKER_TLS_CERTDIR: ""
-#   DOCKER_HOST: "tcp://docker:2375"  # Указать, где находится Docker daemon
-
-build:
-  stage: build
+build_image:
+  stage: build  
   script:
-    - docker build -t order-service_build --target builder .
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:latest -f Dockerfile.dev .  # Собираем образ
+    - docker push $CI_REGISTRY_IMAGE:latest  
 
-test:
-  stage: test
+test_image:
+  stage: test  
   script:
-    - docker build -t order-service_test --target tester .
+    - docker pull $CI_REGISTRY_IMAGE:latest  # Загружаем собранный образ
+    - docker run --rm $CI_REGISTRY_IMAGE:latest go test -count=10 --race ./internal/service  # Запускаем тесты

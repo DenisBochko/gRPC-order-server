@@ -24,8 +24,7 @@ RUN make gen-grpc && \
 # Stage 2: Tests
 FROM builder AS tester
 
-RUN go test -count=10 --race ./internal/service
-
+CMD ["go test -count=10 --race ./internal/service"]
 # Stage 3: Run 
 FROM ubuntu:22.04
 
