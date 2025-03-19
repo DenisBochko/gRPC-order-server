@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"order-server/internal/config"
+	repositorylocal "order-server/internal/repository_local"
 	"order-server/internal/service"
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
@@ -29,7 +30,7 @@ func main() {
 	defer stop()
 
 	// Конфигурации
-	cfg, err := config.NewENV()
+	cfg, err := config.NewYAML()
 	if err != nil {
 		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed load to config", zap.Error(err))
 	}
@@ -117,7 +118,8 @@ func runGRPC(ctx context.Context, gGRPAddr string) (*grpc.Server, error) {
 		return nil, fmt.Errorf("failed to listen TCP: %e", err)
 	}
 
-	srv := service.New(ctx)
+	repo := repositorylocal.New() // Создаём репозиторий с хранением в localmemmory
+	srv := service.New(ctx, repo)
 	server := grpc.NewServer(grpc.UnaryInterceptor(srv.LoggerInterceptor))
 
 	test.RegisterOrderServiceServer(server, srv)

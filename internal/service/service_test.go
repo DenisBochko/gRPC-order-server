@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	repositorylocal "order-server/internal/repository_local"
 	"order-server/internal/service"
 	test "order-server/pkg/api"
 	"sync"
@@ -14,7 +15,8 @@ import (
 
 // Тест создания заказа
 func TestCreateOrder(t *testing.T) {
-	service := service.New(context.Background())
+	repo := repositorylocal.New()
+	service := service.New(context.Background(), repo)
 
 	tests := []struct {
 		name string
@@ -42,7 +44,8 @@ func TestCreateOrder(t *testing.T) {
 
 // Тест состояния гонки данных
 func TestRaceCondition(t *testing.T) {
-	service := service.New(context.Background())
+	repo := repositorylocal.New()
+	service := service.New(context.Background(), repo)
 
 	var wg sync.WaitGroup
 	numWorkers := 50

@@ -2,10 +2,8 @@ package service
 
 import (
 	"context"
-	"fmt"
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,109 +19,78 @@ import (
 // 	mustEmbedUnimplementedOrderServiceServer()
 // }
 
-type Service struct {
-	test.OrderServiceServer
-	ctx     context.Context
-	mutex   sync.Mutex
-	storage map[string]*test.Order
+type Repository interface {
+	Create(item string, quantity int32) string
+	Update(id string, item string, quantity int32) (*test.Order, error)
+	Get(id string) (*test.Order, error)
+	Delete(id string) (bool, error)
+	List() []*test.Order
 }
 
-func New(ctx context.Context) *Service {
+type Service struct {
+	test.OrderServiceServer
+	ctx context.Context
+	Repository
+}
+
+func New(ctx context.Context, repo Repository) *Service {
 	return &Service{
-		ctx:     ctx,
-		storage: make(map[string]*test.Order),
+		ctx:        ctx,
+		Repository: repo,
 	}
 }
 
 func (s *Service) CreateOrder(ctx context.Context, OrderRequest *test.CreateOrderRequest) (*test.CreateOrderResponse, error) {
-	id := uuid.New() // Генерация нового UUID (v4)
+	// Создание заказа
+	id := s.Repository.Create(
+		OrderRequest.GetItem(),
+		OrderRequest.GetQuantity(),
+	)
 
-	// копирование sync.Mutex — запрещено, так как это приводит к неопределенному поведению и гонке данных.
-	// нужно хранить указатель на test.Order, а не сам объект.
-	order := &test.Order{
-		Id:       id.String(),
-		Item:     OrderRequest.GetItem(),
-		Quantity: OrderRequest.GetQuantity(),
-	}
-
-	// Блокируем перед записью
-	s.mutex.Lock()
-	s.storage[id.String()] = order
-	s.mutex.Unlock()
-
-	// Логируем создание заказа
-	// logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("created order: %v", order))
-
-	return &test.CreateOrderResponse{Id: id.String()}, nil
+	return &test.CreateOrderResponse{Id: id}, nil
 }
 
 func (s *Service) UpdateOrder(ctx context.Context, OrderRequest *test.UpdateOrderRequest) (*test.UpdateOrderResponse, error) {
-	id := OrderRequest.GetId()
-
-	s.mutex.Lock()
-	order, isExist := s.storage[id]
-	s.mutex.Unlock()
-
-	if !isExist {
-		s.mutex.Unlock()
-		return nil, fmt.Errorf("order with specified id does not exist")
+	// Апдейт заказа
+	order, err := s.Repository.Update(
+		OrderRequest.GetId(),
+		OrderRequest.GetItem(),
+		OrderRequest.GetQuantity(),
+	)
+	if err != nil {
+		return nil, err // Ошибка уже обёрнута
 	}
-
-	s.mutex.Lock()
-	order.Item = OrderRequest.GetItem()
-	order.Quantity = OrderRequest.GetQuantity()
-	s.storage[order.Id] = order
-	s.mutex.Unlock()
-
-	// logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("update order: %v", order))
 
 	return &test.UpdateOrderResponse{Order: order}, nil
 }
 
 func (s *Service) GetOrder(ctx context.Context, OrderRequest *test.GetOrderRequest) (*test.GetOrderResponse, error) {
-	id := OrderRequest.GetId()
-
-	s.mutex.Lock()
-	order, isExist := s.storage[id]
-	s.mutex.Unlock()
-
-	if !isExist {
-		return nil, fmt.Errorf("order with specified id does not exist")
+	// Получение заказа
+	order, err := s.Repository.Get(
+		OrderRequest.GetId(),
+	)
+	if err != nil {
+		return nil, err // Ошибка уже обёрнута
 	}
-
-	// logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("geted order: %v", order))
 
 	return &test.GetOrderResponse{Order: order}, nil
 }
 
 func (s *Service) DeleteOrder(ctx context.Context, OrderRequest *test.DeleteOrderRequest) (*test.DeleteOrderResponse, error) {
-	id := OrderRequest.GetId()
-
-	s.mutex.Lock()
-	_, isExist := s.storage[id]
-	s.mutex.Unlock()
-
-	if !isExist {
-		return &test.DeleteOrderResponse{Success: false}, fmt.Errorf("order with specified id does not exist")
+	// Удаление заказа
+	success, err := s.Repository.Delete(
+		OrderRequest.GetId(),
+	)
+	if err != nil {
+		return nil, err // Ошибка уже обёрнута
 	}
 
-	delete(s.storage, id)
-
-	// logger.GetLoggerFromCtx(s.ctx).Info(s.ctx, fmt.Sprintf("deleted order with id: %s", id))
-
-	return &test.DeleteOrderResponse{Success: true}, nil
+	return &test.DeleteOrderResponse{Success: success}, nil
 }
 
 func (s *Service) ListOrders(ctx context.Context, OrdersRequest *test.ListOrdersRequest) (*test.ListOrdersResponse, error) {
-	orders := make([]*test.Order, 0, len(s.storage))
-
-	s.mutex.Lock()
-	for _, value := range s.storage {
-		orders = append(orders, value)
-	}
-	s.mutex.Unlock()
-
-	// logger.GetLoggerFromCtx(ctx).Info(ctx, fmt.Sprint(ctx.Value(logger.RequestID)))
+	// Получение всех заказов
+	orders := s.Repository.List()
 
 	return &test.ListOrdersResponse{Orders: orders}, nil
 }
