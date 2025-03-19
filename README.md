@@ -8,6 +8,7 @@ make start
 ```
 
 ### Запуск через Docker
+#### Необходимо создать ```.env``` файл (есть пример в env.example)
 ```
 docker-compose up --build
 ```
