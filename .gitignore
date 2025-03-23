@@ -3,3 +3,4 @@
 /bin
 pkg/api/*
 !pkg/api/.gitkeep
+redisdata
