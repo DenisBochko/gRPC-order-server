@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/http"
 	"order-server/internal/config"
-	repositorylocal "order-server/internal/repository_local"
+	"order-server/internal/repository"
 	"order-server/internal/service"
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
@@ -16,6 +16,7 @@ import (
 	"syscall"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -57,7 +58,7 @@ func main() {
 	}
 
 	// Запускаем gRPC server
-	grpcServer, err := runGRPC(ctx, grpcAddr)
+	grpcServer, err := runGRPC(ctx, conn, grpcAddr)
 	if err != nil {
 		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to start gRPC server", zap.Error(err))
 	}
@@ -112,13 +113,13 @@ func runGRPCGateway(ctx context.Context, gGRPAddr, httpAddr string) (*http.Serve
 	return server, nil
 }
 
-func runGRPC(ctx context.Context, gGRPAddr string) (*grpc.Server, error) {
+func runGRPC(ctx context.Context, conn *pgxpool.Pool, gGRPAddr string) (*grpc.Server, error) {
 	lis, err := net.Listen("tcp", gGRPAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen TCP: %e", err)
 	}
 
-	repo := repositorylocal.New() // Создаём репозиторий с хранением в localmemmory
+	repo := repository.New(conn) // Создаём репозиторий с хранением в localmemmory
 	srv := service.New(ctx, repo)
 	server := grpc.NewServer(grpc.UnaryInterceptor(srv.LoggerInterceptor))
 

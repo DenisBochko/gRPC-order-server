@@ -19,7 +19,7 @@ func New() *Repositorylocal {
 	}
 }
 
-func (r *Repositorylocal) Create(item string, quantity int32) string {
+func (r *Repositorylocal) Create(item string, quantity int32) (string, error) {
 	id := uuid.New() // Генерация нового UUID (v4)
 	// копирование sync.Mutex — запрещено, так как это приводит к неопределенному поведению и гонке данных.
 	// нужно хранить указатель на test.Order, а не сам объект.
@@ -34,7 +34,7 @@ func (r *Repositorylocal) Create(item string, quantity int32) string {
 	r.storage[id.String()] = order
 	r.mutex.Unlock()
 
-	return id.String()
+	return id.String(), nil
 }
 
 func (r *Repositorylocal) Update(id string, item string, quantity int32) (*test.Order, error) {

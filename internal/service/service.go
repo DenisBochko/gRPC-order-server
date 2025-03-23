@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
 	"time"
@@ -20,7 +21,7 @@ import (
 // }
 
 type Repository interface {
-	Create(item string, quantity int32) string
+	Create(item string, quantity int32) (string, error)
 	Update(id string, item string, quantity int32) (*test.Order, error)
 	Get(id string) (*test.Order, error)
 	Delete(id string) (bool, error)
@@ -42,10 +43,15 @@ func New(ctx context.Context, repo Repository) *Service {
 
 func (s *Service) CreateOrder(ctx context.Context, OrderRequest *test.CreateOrderRequest) (*test.CreateOrderResponse, error) {
 	// Создание заказа
-	id := s.Repository.Create(
+	id, err := s.Repository.Create(
 		OrderRequest.GetItem(),
 		OrderRequest.GetQuantity(),
 	)
+
+	if err != nil {
+		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to create order", zap.Error(err))
+		return nil, errors.New("failed to create order")
+	}
 
 	return &test.CreateOrderResponse{Id: id}, nil
 }
@@ -58,7 +64,8 @@ func (s *Service) UpdateOrder(ctx context.Context, OrderRequest *test.UpdateOrde
 		OrderRequest.GetQuantity(),
 	)
 	if err != nil {
-		return nil, err // Ошибка уже обёрнута
+		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed to update order", zap.Error(err))
+		return nil, err
 	}
 
 	return &test.UpdateOrderResponse{Order: order}, nil
@@ -78,14 +85,14 @@ func (s *Service) GetOrder(ctx context.Context, OrderRequest *test.GetOrderReque
 
 func (s *Service) DeleteOrder(ctx context.Context, OrderRequest *test.DeleteOrderRequest) (*test.DeleteOrderResponse, error) {
 	// Удаление заказа
-	success, err := s.Repository.Delete(
+	isSuccess, err := s.Repository.Delete(
 		OrderRequest.GetId(),
 	)
 	if err != nil {
 		return nil, err // Ошибка уже обёрнута
 	}
 
-	return &test.DeleteOrderResponse{Success: success}, nil
+	return &test.DeleteOrderResponse{Success: isSuccess}, nil
 }
 
 func (s *Service) ListOrders(ctx context.Context, OrdersRequest *test.ListOrdersRequest) (*test.ListOrdersResponse, error) {
