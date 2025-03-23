@@ -2,12 +2,14 @@ package config
 
 import (
 	"order-server/pkg/postgres"
+	redisClient "order-server/pkg/redis"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
 	postgres.PostgresCfg
+	redisClient.RedisClientCfg
 	PortGRPC    string `yaml:"GRPC_PORT" env:"GRPC_PORT"`
 	PortHttp    string `yaml:"HTTP_PORT" env:"HTTP_PORT"`
 	Environment string `yaml:"ENV" env:"ENV"`

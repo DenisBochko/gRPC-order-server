@@ -8,12 +8,15 @@ import (
 	"net/http"
 	"order-server/internal/config"
 	"order-server/internal/repository"
+	repositorycached "order-server/internal/repository_cached"
 	"order-server/internal/service"
 	test "order-server/pkg/api"
 	"order-server/pkg/logger"
 	"order-server/pkg/postgres"
+	redisClient "order-server/pkg/redis"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -31,7 +34,7 @@ func main() {
 	defer stop()
 
 	// Конфигурации
-	cfg, err := config.NewYAML()
+	cfg, err := config.NewENV()
 	if err != nil {
 		logger.GetLoggerFromCtx(ctx).Info(ctx, "failed load to config", zap.Error(err))
 	}
@@ -58,7 +61,7 @@ func main() {
 	}
 
 	// Запускаем gRPC server
-	grpcServer, err := runGRPC(ctx, conn, grpcAddr)
+	grpcServer, err := runGRPC(ctx, cfg, conn, grpcAddr)
 	if err != nil {
 		logger.GetLoggerFromCtx(ctx).Fatal(ctx, "failed to start gRPC server", zap.Error(err))
 	}
@@ -113,13 +116,23 @@ func runGRPCGateway(ctx context.Context, gGRPAddr, httpAddr string) (*http.Serve
 	return server, nil
 }
 
-func runGRPC(ctx context.Context, conn *pgxpool.Pool, gGRPAddr string) (*grpc.Server, error) {
+func runGRPC(ctx context.Context, cfg *config.Config, conn *pgxpool.Pool, gGRPAddr string) (*grpc.Server, error) {
 	lis, err := net.Listen("tcp", gGRPAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen TCP: %e", err)
 	}
 
-	repo := repository.New(conn) // Создаём репозиторий с хранением в localmemmory
+	// repo := repository.New(conn) // Создаём репозиторий с хранением в localmemmory
+
+	// Получем клиента Redis
+	rbd := redisClient.New(ctx, cfg.RedisClientCfg)
+
+	// Получаем дефолтный репозиторий
+	defaultRepo := repository.New(conn)
+
+	// Создаём репозиторий с кэшированием
+	repo := repositorycached.New(defaultRepo, rbd, time.Duration(60)*time.Second)
+
 	srv := service.New(ctx, repo)
 	server := grpc.NewServer(grpc.UnaryInterceptor(srv.LoggerInterceptor))
 
